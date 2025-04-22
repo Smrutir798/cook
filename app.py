@@ -1,15 +1,5 @@
 import streamlit as st
-import pandas as pd
-import spacy
-import nltk
-from nltk.corpus import stopwords
-from sklearn.metrics.pairwise import cosine_similarity
 import pickle
-
-# Load necessary resources
-nltk.download('punkt')
-nltk.download('stopwords')
-nlp = spacy.load('en_core_web_sm')
 
 # Load the saved model
 @st.cache_resource
@@ -22,34 +12,23 @@ model_data = load_model()
 tfidf_vectorizer = model_data['tfidf_vectorizer']
 tfidf_matrix = model_data['tfidf_matrix']
 df = model_data['dataframe']
-
-# Preprocess text
-def preprocess_text(text):
-    if isinstance(text, str) and text:
-        text = text.lower()
-        import string
-        text = ''.join([char for char in text if char not in string.punctuation])
-        tokens = nltk.word_tokenize(text)
-        stop_words = set(stopwords.words('english'))
-        tokens = [word for word in tokens if word not in stop_words]
-        return ' '.join(tokens)
-    return ''
-
-# Calculate similarity
-def calculate_similarity(user_ingredients):
-    user_ingredients_text = preprocess_text(', '.join(user_ingredients))
-    user_tfidf = tfidf_vectorizer.transform([user_ingredients_text])
-    cosine_similarities = cosine_similarity(user_tfidf, tfidf_matrix)[0]
-    return cosine_similarities
+cosine_similarities = model_data.get('cosine_similarities')
+if cosine_similarities is None:
+    st.error("The model data is missing 'cosine_similarities'. Please check the model file.")
+    st.stop()
 
 # Recommend recipes
 def recommend_recipes(user_ingredients, user_prep_time, user_cook_time, top_n=5):
-    cosine_similarities = calculate_similarity(user_ingredients)
-    df['similarity'] = cosine_similarities
+    # Calculate similarity based on user ingredients
+    user_query = " ".join(user_ingredients)
+    user_tfidf = tfidf_vectorizer.transform([user_query])
+    similarity_scores = cosine_similarities.dot(user_tfidf.T).toarray().flatten()
+    
+    df['similarity'] = similarity_scores
 
     # Filter recipes based on preparation and cooking time
     filtered_df = df[
-        (df['PrepTimeInMins'] <= user_prep_time) &
+        (df['PrepTimeInMins'] <= user_prep_time) & 
         (df['CookTimeInMins'] <= user_cook_time)
     ]
 
