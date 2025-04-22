@@ -14,7 +14,7 @@ nlp = spacy.load('en_core_web_sm')
 # Load the saved model
 @st.cache_resource
 def load_model():
-    with open(r'C:\Users\smrut\env\recipe_recommender_model.pkl', 'rb') as file:
+    with open(r'recipe_recommender_model.pkl', 'rb') as file:
         model_data = pickle.load(file)
     return model_data
 
